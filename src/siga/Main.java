@@ -1,37 +1,50 @@
 package siga;
 
 /**
- * Ponto de entrada do SIGA (código INICIAL da atividade da Aula 7).
+ * Ponto de entrada do SIGA (código refatorado da Aula 7).
  *
- * O programa FUNCIONA: matricula alunos e gera o relatório. Mas repare na
- * saída: o ServicoMatricula está emitindo comandos SQL, ou seja, a regra de
- * negócio conhece a tecnologia de persistência. Sua tarefa é extrair essa
- * responsabilidade para um DAO.
+ * Demonstração da Etapa 5:
+ * - Troca da implementação do DAO (AlunoDAOBanco e AlunoDAOMemoria) injetada em ServicoMatricula,
+ *   sem alterar nenhuma linha da classe de serviço.
+ * - Teste da regra de validação da média isolado em memória, sem depender de banco de dados.
  */
 public class Main {
 
     public static void main(String[] args) {
-        System.out.println("=== SIGA - Atividade de Persistência e DAO (código inicial) ===\n");
+        System.out.println("=== SIGA - Demonstração da Troca de Implementações DAO ===\n");
 
-        ServicoMatricula servico = new ServicoMatricula();
+        // 1. Demonstração com AlunoDAOBanco
+        System.out.println("--- 1. Executando com AlunoDAOBanco - SQL isolado no DAO ---");
 
-        servico.matricular(new Aluno("Maria Silva", "2026001", 8.5));
-        servico.matricular(new Aluno("João Souza",  "2026002", 6.0));
+        AlunoDAO daoBanco = new AlunoDAOBanco();
+        ServicoMatricula servicoBanco = new ServicoMatricula(daoBanco);
+
+        servicoBanco.matricular(new Aluno("Maria Silva", "2026001", 8.5));
+        servicoBanco.matricular(new Aluno("João Souza",  "2026002", 6.0));
         System.out.println();
+        servicoBanco.gerarRelatorio();
 
-        servico.gerarRelatorio();
+        System.out.println("\n------------------------------------------------------------\n");
 
-        // A regra de negócio funciona: média inválida é rejeitada.
+        // 2. Troca da implementação para AlunoDAOMemoria sem alterar nada na regra de negócio
+        System.out.println("--- 2. Trocando para AlunoDAOMemoria ---");
+        AlunoDAO daoMemoria = new AlunoDAOMemoria();
+        ServicoMatricula servicoMemoria = new ServicoMatricula(daoMemoria);
+
+        servicoMemoria.matricular(new Aluno("Carlos Ferreira", "2026003", 9.0));
+        servicoMemoria.matricular(new Aluno("Ana Lima",        "2026004", 7.5));
+        System.out.println();
+        servicoMemoria.gerarRelatorio();
+
+        // 3. Teste da regra de negócio: média inválida é rejeitada
         System.out.println();
         try {
-            servico.matricular(new Aluno("Teste Inválido", "2026003", -1));
+            servicoMemoria.matricular(new Aluno("Teste Inválido", "2026005", -1));
         } catch (IllegalArgumentException e) {
             System.out.println("Regra de negócio funcionou: " + e.getMessage());
         }
 
-        System.out.println("\nObserve: para testar a regra da média, foi preciso passar");
-        System.out.println("pela camada de persistência. O SQL está dentro da classe de");
-        System.out.println("negócio (viola SRP e DIP) e o acesso a dados está duplicado.");
-        System.out.println("Sua tarefa é extrair a interface AlunoDAO e injetá-la no serviço.");
+        System.out.println("\nConclusão: ServicoMatricula não contém nenhum comando SQL (SRP)");
+        System.out.println("e depende exclusivamente da abstração AlunoDAO (DIP).");
     }
 }
